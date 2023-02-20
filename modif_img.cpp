@@ -155,4 +155,6 @@ int main (int argc , char** argv)
   free(img);
   free(d_img);
   free(d_tmp);
+
+  return 0;
 }
