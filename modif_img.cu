@@ -17,7 +17,7 @@ int main(int argc, char** argv){
     const char* PathName="img.jpg";
     const char* PathDest="new_img.png";
 
-    ui32* dr_img, db_img, dg_img, hr_img, hb_img, hg_img;
+    ui32* d_img;
 
     // load and decode a regular file
     FREE_IMAGE_FORMAT fif = FreeImage_GetFileType(PathName);
@@ -34,7 +34,7 @@ int main(int argc, char** argv){
     const ui32 width = FreeImage_GetWidth(bitmap);
     const ui32 height = FreeImage_GetHeight(bitmap);
     const ui32 pitch = FreeImage_GetPitch(bitmap);
-    const ui32 IMG_SIZE = width * height;
+    const ui32 IMG_SIZE = sizeof(ui32) * width * height;
     fprintf(stderr, "Processing Image of size %d x %d\n", width, height);
 
     // Array of IMG
@@ -43,19 +43,14 @@ int main(int argc, char** argv){
         perror("Memory allocation for img array failed.\n");
         exit(1);
     }
-    ui32* h_tmp = (ui32*)malloc(sizeof(ui32) * 3 * IMG_SIZE);
-    if(h_tmp == NULL){
+    ui32* h_img = (ui32*)malloc(sizeof(ui32) * 3 * IMG_SIZE);
+    if(h_img == NULL){
         perror("Memory allocation for temporary array failed.\n");
         exit(1);
     }
-    // RED, BLUE and GREEN pixels of IMG on host
-    cudaMallocHost((void**)&hr_img, IMG_SIZE);
-    cudaMallocHost((void**)&hb_img, IMG_SIZE);
-    cudaMallocHost((void**)&hg_img, IMG_SIZE);
+
     // RED, BLUE and GREEN pixels of IMG on device
-    cudaMalloc((void**)&dr_img, IMG_SIZE);
-    cudaMalloc((void**)&db_img, IMG_SIZE);
-    cudaMalloc((void**)&dg_img, IMG_SIZE);
+    cudaMalloc((void**)&d_img, 3 * IMG_SIZE);
 
     BYTE *bits = (BYTE*)FreeImage_GetBits(bitmap);
     for (ui32 y = 0U; y < height; ++y){
@@ -72,5 +67,6 @@ int main(int argc, char** argv){
     }
 
     free(img);
+    free(h_img);
     return 0;
 }
