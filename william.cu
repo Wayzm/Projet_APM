@@ -12,7 +12,7 @@
 
 using namespace std;
 
-
+//commentaire
 __global__ void horizontal_sym(ui32* d_img, ui32* d_tmp, ui32 width, ui32 height){
 
     // Compute thread id
