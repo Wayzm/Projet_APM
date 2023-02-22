@@ -56,6 +56,47 @@ __global__ void saturation_b(ui32* d_img, size_t size)
     }
 }
 
+__global__ void flou(ui32* d_img, size_t size, size_t width)
+{
+   int id = get_id();
+   ui32 img0 = d_img[id*3+0];
+   ui32 img1 = d_img[id*3+1];
+   ui32 img2 = d_img[id*3+2];
+
+   if(id+1 <= size)
+   {
+      img0 += d_img[id*3+0+3];
+      img1 += d_img[id*3+1+3];
+      img2 += d_img[id*3+2+3];
+   }
+   if(id-1 <= size)
+   {
+      img0 += d_img[id*3+0-3];
+      img1 += d_img[id*3+1-3];
+      img2 += d_img[id*3+2-3];
+   }
+   if(id+width <= size)
+   {
+      img0 += d_img[(id+width)*3+0];
+      img1 += d_img[(id+width)*3+1];
+      img2 += d_img[(id+width)*3+2];
+   }
+   if(id-width <= size)
+   {
+      img0 += d_img[(id-width)*3+0];
+      img1 += d_img[(id-width)*3+1];
+      img2 += d_img[(id-width)*3+2];
+   }
+
+   img0 /= 5;
+   img1 /= 5;
+   img2 /= 5;
+
+   d_img[id*3+0] = img0;
+   d_img[id*3+1] = img1;
+   d_img[id*3+2] = img2;
+}
+
 
 int main(int argc, char** argv){
 
@@ -84,12 +125,12 @@ int main(int argc, char** argv){
     fprintf(stderr, "Processing Image of size %d x %d\n", width, height);
 
     // Array of IMG
-    ui32* img = (ui32*)malloc(sizeof(ui32) * 3 * IMG_SIZE);
+    ui32* img = (ui32*)malloc(3 * IMG_SIZE);
     if(img == NULL){
         perror("Memory allocation for img array failed.\n");
         exit(1);
     }
-    ui32* h_img = (ui32*)malloc(sizeof(ui32)*3 * IMG_SIZE);
+    ui32* h_img = (ui32*)malloc(3 * IMG_SIZE);
     if(h_img == NULL){
         perror("Memory allocation for temporary array failed.\n");
         exit(1);
@@ -97,7 +138,7 @@ int main(int argc, char** argv){
 
     // RED, BLUE and GREEN pixels of IMG on device
     d_img = NULL;
-    cudaMalloc((void**)&d_img, sizeof(ui32) * 3 * IMG_SIZE);
+    cudaMalloc((void**)&d_img,3 * IMG_SIZE);
     if(!d_img)
     {
         printf("problème d'allocation memoire\n");
@@ -118,19 +159,23 @@ int main(int argc, char** argv){
       bits += pitch;
     }
 
-    cudaError_t err = cudaMemcpy(d_img,img,sizeof(ui32)*3*IMG_SIZE,cudaMemcpyHostToDevice);
+    cudaError_t err = cudaMemcpy(d_img,img,3*IMG_SIZE,cudaMemcpyHostToDevice);
     if(err != cudaSuccess)
         printf("probleme dans cudaMemcpy");
     
     dim3 Threads_Per_Blocks(32, 32);
     dim3 Num_Blocks(width/Threads_Per_Blocks.x+1, height/Threads_Per_Blocks.y+1);
     
-   saturation_g<<<Num_Blocks,Threads_Per_Blocks>>>(d_img,width*height); 
+   for(size_t k = 0; k < 100; k++)
+   {
+      flou<<<Num_Blocks,Threads_Per_Blocks>>>(d_img,width*height,width);
+   }
+   
    err = cudaGetLastError();
    if(err != cudaSuccess)
         printf("probleme dans cudaMemcpy");
 
-   err = cudaMemcpy(img,d_img,sizeof(ui32)*3*IMG_SIZE,cudaMemcpyDeviceToHost);
+   err = cudaMemcpy(img,d_img,3*IMG_SIZE,cudaMemcpyDeviceToHost);
    if(err != cudaSuccess)
         printf("probleme dans cudaMemcpy");
 
