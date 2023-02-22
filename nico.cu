@@ -13,6 +13,7 @@
 
 using namespace std;
 
+//commentaire
 __device__ int get_id(void)
 {
   int thread_per_block = blockDim.x * blockDim.y * blockDim.z;
