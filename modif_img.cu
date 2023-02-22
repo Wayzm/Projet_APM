@@ -1,6 +1,8 @@
 #include <iostream>
 #include <string.h>
 #include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
 #include "FreeImage.h"
 
 #define WIDTH 1920 // I genuinely don't know why these values exist
