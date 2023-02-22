@@ -89,8 +89,8 @@ __global__ void sobel(ui32* dr, ui32* dg, ui32* db, ui32 width){
     sobel_v[2][1] = 2;
     sobel_v[2][2] = 1;
     __syncthreads();
-    const int value_h = sobel_h[threadIdx.x][0] * dr[top] + sobel_h[threadIdx.x][2] * dr[bottom];
-    const int value_v = sobel_v[threadIdx.x][0] * dr[top] + sobel_v[threadIdx.x][1] * dr[middle] + sobel_v[threadIdx.x][2] * dr[bottom];
+    const int value_h = sobel_h[threadIdx.y][0] * dr[top] + sobel_h[threadIdx.y][2] * dr[bottom];
+    const int value_v = sobel_v[threadIdx.y][0] * dr[top] + sobel_v[threadIdx.y][1] * dr[middle] + sobel_v[threadIdx.y][2] * dr[bottom];
     const ui32 result = (ui32)sqrtf(value_h * value_h + value_v * value_v);
     __syncthreads();
     dr[idx] = result;
