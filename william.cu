@@ -10,19 +10,18 @@
 
 using namespace std;
 
-__global__ void Vertical_Sym(ui32* dr_img, ui32* db_img, ui32* dg_img, ui32 SIZE_IMG){
-    __shared__ ui32 d_tmp[WIDTH][HEIGHT];
+__global__ void horizontal_sym(ui32* d_img, ui32* d_tmp, ui32 width, ui32 height){
 
-    // Get their position on the grid
-    int line = threadIdx.x + blockDim.x * blockIdx.x;
-    int col = threadIdx.y + blockDim.y * blockIdx.y;
-
-    // We do the vartical symetry
-
-
-    // Wait that every threads finished storing their values
-    __syncthreads();
-
+    // Compute thread id
+    const ui32 x = threadIdx.x + blockDim.x * blockIdx.x;
+    const ui32 y = threadIdx.y + blockDim.y * blockIdx.y;
+    const ui32 idx = y * width + x;
+    // Compute target destination
+    const ui32 xT = x;
+    const ui32 yT = blockDim.y * blockIdx.y - y%blockDim.y;
+    const ui32 idxT = yT * width + xT;
+    // Flipping the image
+    d_tmp[idx] = 0;
 }
 int main(int argc, char** argv){
 
@@ -30,7 +29,8 @@ int main(int argc, char** argv){
     const char* PathName="img.jpg";
     const char* PathDest="new_img.png";
 
-    ui32* dr_img, db_img, dg_img, hr_img, hb_img, hg_img;
+    ui32* d_img;
+    ui32* d_tmp;
 
     // load and decode a regular file
     FREE_IMAGE_FORMAT fif = FreeImage_GetFileType(PathName);
@@ -47,7 +47,7 @@ int main(int argc, char** argv){
     const ui32 width = FreeImage_GetWidth(bitmap);
     const ui32 height = FreeImage_GetHeight(bitmap);
     const ui32 pitch = FreeImage_GetPitch(bitmap);
-    const ui32 IMG_SIZE = sizeof(ui32) * width * height; // A MODIF
+    const ui32 IMG_SIZE = sizeof(ui32) * width * height;
     fprintf(stderr, "Processing Image of size %d x %d\n", width, height);
 
     // Array of IMG
@@ -56,19 +56,15 @@ int main(int argc, char** argv){
         perror("Memory allocation for img array failed.\n");
         exit(1);
     }
-    ui32* h_tmp = (ui32*)malloc(3 * IMG_SIZE);
-    if(h_tmp == NULL){
+    ui32* h_img = (ui32*)malloc(3 * IMG_SIZE);
+    if(h_img == NULL){
         perror("Memory allocation for temporary array failed.\n");
         exit(1);
     }
-    // RED, BLUE and GREEN pixels of IMG on host
-    cudaMallocHost((void**)&hr_img, IMG_SIZE);
-    cudaMallocHost((void**)&hb_img, IMG_SIZE);
-    cudaMallocHost((void**)&hg_img, IMG_SIZE);
+
     // RED, BLUE and GREEN pixels of IMG on device
-    cudaMalloc((void**)&dr_img, IMG_SIZE);
-    cudaMalloc((void**)&db_img, IMG_SIZE);
-    cudaMalloc((void**)&dg_img, IMG_SIZE);
+    cudaMalloc((void**)&d_img, 3 * IMG_SIZE);
+    cudaMalloc((void**)&d_tmp, 3 * IMG_SIZE);
 
     BYTE *bits = (BYTE*)FreeImage_GetBits(bitmap);
     for (ui32 y = 0U; y < height; ++y){
@@ -84,10 +80,42 @@ int main(int argc, char** argv){
       bits += pitch;
     }
 
-    // 64 threads per blocs in 2D
+    // 1024 threads per blocs in 2D
     dim3 Threads_Per_Blocks(32, 32);
-    dim3 Num_Blocks(WIDTH/Threads_Per_Blocks.x, HEIGHT/Threads_Per_Blocks.y);
+    dim3 Num_Blocks(width/Threads_Per_Blocks.x, height/Threads_Per_Blocks.y);
+
+    // Copy to device
+    cudaMemcpy(d_img, img, 3 * IMG_SIZE, cudaMemcpyHostToDevice);
+    //Horizontal Symetry
+    horizontal_sym<<<Num_Blocks, Threads_Per_Blocks>>>(d_img, d_tmp, width, height);
+    // Copy to Host
+    cudaMemcpy(img, d_tmp, 3 * IMG_SIZE, cudaMemcpyDeviceToHost);
+
+    bits = (BYTE*)FreeImage_GetBits(bitmap);
+    for(int y =0; y<height; y++)
+    {
+        BYTE *pixel = (BYTE*)bits;
+        for(int x = 0; x<width; ++x)
+        {
+            RGBQUAD newcolor;
+            int idx = ((y * width) + x) * 3;
+            newcolor.rgbRed = img[idx + 0];
+            newcolor.rgbGreen = img[idx + 1];
+            newcolor.rgbBlue = img[idx + 2];
+
+            if(!FreeImage_SetPixelColor(bitmap, x, y, &newcolor))
+                {fprintf(stderr, "(%d, %d) Fail...\n", x, y); }
+        pixel+=3;
+        }
+        // next line
+        bits += pitch;
+    }
+
+    if(FreeImage_Save (FIF_PNG, bitmap , PathDest , 0))
+        cout << "Image successfully saved ! " << endl ;
+    FreeImage_DeInitialise(); //Cleanup !
 
     free(img);
+    free(h_img);
     return 0;
 }
