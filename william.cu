@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string.h>
 #include <cstdlib>
+#include <cmath>
 #include <cstdio>
 #include <stdlib.h>
 #include "FreeImage.h"
@@ -43,8 +44,8 @@ __global__ void grey_img(ui32* dr, ui32* dg, ui32* db, ui32 width, ui32 height){
 
 /*** DO NOT FORGET TO GREY SCALE FIRST***/
 __global__ void sobel(ui32* dr, ui32* dg, ui32* db, ui32 width){
-    __shared__ int sobel[3][3];
-
+    __shared__ int sobel_h[3][3];
+    __shared__ int sobel_v[3][3];
     // Compute thread id
     const ui32 x = threadIdx.x + blockDim.x * blockIdx.x;
     const ui32 y = threadIdx.y + blockDim.y * blockIdx.y;
@@ -58,26 +59,43 @@ __global__ void sobel(ui32* dr, ui32* dg, ui32* db, ui32 width){
     const ui32 bottom = (2 + blockDim.y * blockIdx.y) * width + x;
     // const ui32 idx = y * (width) + x;
     /*** SOBEL ALGORITHM ***/
-    /**  Sobel matrix x threads of each block
+    /**  Sobel matrix x threads of each block, horizontal change
     ** | -1 0 1 |   | (0 0) (1 0) (2 0) |
     ** | -2 0 2 | x | (0 1) (1 1) (2 1) |
     ** | -1 0 1 |   | (0 2) (1 2) (2 2) |
+    **
+    ** sobel vertical change
+    ** | 1 2 1 |   | (0 0) (1 0) (2 0) |
+    ** | 0 0 0 | x | (0 1) (1 1) (2 1) |
+    ** | -1 -2 -1 |   | (0 2) (1 2) (2 2) |
     **/
-    sobel[0][0] = -1;
-    sobel[0][1] = 0;
-    sobel[0][2] = 1;
-    sobel[1][0] = -2;
-    sobel[1][1] = 0;
-    sobel[1][2] = 2;
-    sobel[2][0] = -1;
-    sobel[2][1] = 0;
-    sobel[2][2] = 1;
+    sobel_h[0][0] = -1;
+    sobel_h[0][1] = 0;
+    sobel_h[0][2] = 1;
+    sobel_h[1][0] = -2;
+    sobel_h[1][1] = 0;
+    sobel_h[1][2] = 2;
+    sobel_h[2][0] = -1;
+    sobel_h[2][1] = 0;
+    sobel_h[2][2] = 1;
+    //
+    sobel_v[0][0] = -1;
+    sobel_v[0][1] = -2;
+    sobel_v[0][2] = -1;
+    sobel_v[1][0] = 0;
+    sobel_v[1][1] = 0;
+    sobel_v[1][2] = 0;
+    sobel_v[2][0] = 1;
+    sobel_v[2][1] = 2;
+    sobel_v[2][2] = 1;
     __syncthreads();
-    int value = sobel[threadIdx.x][0] * dr[top] + sobel[threadIdx.x][1] * dr[middle] + sobel[threadIdx.x][2] * dr[bottom];
+    const int value_h = sobel_h[threadIdx.x][0] * dr[top] + sobel_h[threadIdx.x][2] * dr[bottom];
+    const int value_v = sobel_v[threadIdx.x][0] * dr[top] + sobel_v[threadIdx.x][1] * dr[middle] + sobel_v[threadIdx.x][2] * dr[bottom];
+    const ui32 result = (ui32)sqrtf(value_h * value_h + value_v * value_v);
     __syncthreads();
-    dr[idx] = value;
-    dg[idx] = value;
-    db[idx] = value;
+    dr[idx] = result;
+    dg[idx] = result;
+    db[idx] = result;
 }
 
 int main(int argc, char** argv){
