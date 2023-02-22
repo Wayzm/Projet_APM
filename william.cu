@@ -1,5 +1,7 @@
 #include <iostream>
 #include <string.h>
+#include <cstdlib>
+#include <cstdio>
 #include <stdlib.h>
 #include "FreeImage.h"
 
