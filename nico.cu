@@ -28,34 +28,37 @@ __device__ int get_id(void)
   return id;
 }
 
-__global__ void saturation_r(ui32* d_img, size_t size)
+__global__ void saturation_r(ui32* d_img, size_t width, size_t height)
 {
     int id = get_id();
 
-    if(id < size)
+    if(id < width*height)
     {
         d_img[id*3+0] = 255;
     }
+
 }
 
-__global__ void saturation_g(ui32* d_img, size_t size)
+__global__ void saturation_g(ui32* d_img, size_t width, size_t height)
 {
     int id = get_id();
 
-    if(id < size)
+    if(id < width*height)
     {
 	d_img[id*3+1] = 255;
     }
+
 }
 
-__global__ void saturation_b(ui32* d_img, size_t size)
+__global__ void saturation_b(ui32* d_img, size_t width, size_t height)
 {
     int id = get_id();
 
-    if(id < size)
+    if(id < width*height)
     {
         d_img[id*3+2] = 255;
     }
+   
 }
 
 __global__ void flou(ui32* d_img, size_t size, size_t width)
@@ -68,31 +71,31 @@ __global__ void flou(ui32* d_img, size_t size, size_t width)
       img1 = d_img[id*3+1];
       img2 = d_img[id*3+2];
 
-      if(id+1 < size)
+      if(id+1 <= size)
       {
          img0 += d_img[id*3+0+3];
          img1 += d_img[id*3+1+3];
          img2 += d_img[id*3+2+3];
       }
-      if(id-1 < size && id-1 > 0)
+      if(id-1 <= size)
       {
          img0 += d_img[id*3+0-3];
          img1 += d_img[id*3+1-3];
          img2 += d_img[id*3+2-3];
       }
-      if(id+width < size)
+      if(id+width <= size)
       {
          img0 += d_img[(id+width)*3+0];
          img1 += d_img[(id+width)*3+1];
          img2 += d_img[(id+width)*3+2];
       }
-      if(id-width < size && id-width > 0)
+      if(id-width <= size)
       {
          img0 += d_img[(id-width)*3+0];
          img1 += d_img[(id-width)*3+1];
          img2 += d_img[(id-width)*3+2];
       }
-   }
+  }
 
    img0 /= 5;
    img1 /= 5;
@@ -130,6 +133,7 @@ __global__ void grey_img(ui32* d_img, ui32 width, ui32 height){
        d_img[id*3+1] = val;
        d_img[id*3+2] = val;
    }
+  
 }
 
 __global__ void pop_art()
@@ -236,7 +240,7 @@ int main(int argc, char** argv){
        dim3 Threads_Per_Blocks(32, 32);
        dim3 Num_Blocks(width/32+1, height/32+1);   
 
-       saturation_r<<<Num_Blocks,Threads_Per_Blocks>>>(d_img,width*height);
+       saturation_r<<<Num_Blocks,Threads_Per_Blocks>>>(d_img,width,height);
        cudaMemcpy(img,d_img,3*IMG_SIZE,cudaMemcpyDeviceToHost);
    }
 
@@ -245,7 +249,7 @@ int main(int argc, char** argv){
        dim3 Threads_Per_Blocks(32, 32);
        dim3 Num_Blocks(3 * width/Threads_Per_Blocks.x, height/Threads_Per_Blocks.y);    
 
-       saturation_g<<<Num_Blocks,Threads_Per_Blocks>>>(d_img,width*height);
+       saturation_g<<<Num_Blocks,Threads_Per_Blocks>>>(d_img,width,height);
        cudaMemcpy(img,d_img,3*IMG_SIZE,cudaMemcpyDeviceToHost);
    }
 
@@ -254,7 +258,7 @@ int main(int argc, char** argv){
        dim3 Threads_Per_Blocks(32, 32);
        dim3 Num_Blocks(3 * width/Threads_Per_Blocks.x, height/Threads_Per_Blocks.y);    
 
-       saturation_b<<<Num_Blocks,Threads_Per_Blocks>>>(d_img,width*height);
+       saturation_b<<<Num_Blocks,Threads_Per_Blocks>>>(d_img,width,height);
        cudaMemcpy(img,d_img,3*IMG_SIZE,cudaMemcpyDeviceToHost);
    }
 
@@ -268,9 +272,8 @@ int main(int argc, char** argv){
 
    if(!strcmp(argv[i],"flou"))
    {
-       printf("on est dans le flou\n");
        dim3 Threads_Per_Blocks(32, 32);
-       dim3 Num_Blocks(3 * width/Threads_Per_Blocks.x, height/Threads_Per_Blocks.y); 
+       dim3 Num_Blocks(width/Threads_Per_Blocks.x+1, height/Threads_Per_Blocks.y+1); 
        
        for(int k = 0; k < 100; k++)
        {
@@ -296,6 +299,15 @@ int main(int argc, char** argv){
           cudaStreamCreate(&stream[s]);
        }
        FIBITMAP *split = FreeImage_Rescale(bitmap,width/2,height/2,FILTER_BOX);
+       //ui32* small = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
+       /*ui32* bl;
+       cudaMallocHost((void**)&bl,3*sizeof(ui32)*(width/2)*(height/2));
+       ui32* br;
+       cudaMallocHost((void**)&br,3*sizeof(ui32)*(width/2)*(height/2));
+       ui32* tl;
+       cudaMallocHost((void**)&tl,3*sizeof(ui32)*(width/2)*(height/2));
+       ui32* tr;
+       cudaMallocHost((void**)&tr,3*sizeof(ui32)*(width/2)*(height/2));*/
        ui32* bl = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
        ui32* br = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
        ui32* tl = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
@@ -314,7 +326,6 @@ int main(int argc, char** argv){
           // next line
           bits += pitch;
        }
-       
        ui32* dbl;
        ui32* dbr;
        ui32* dtl;
@@ -324,30 +335,30 @@ int main(int argc, char** argv){
        cudaMalloc((void**)&dbr, 3*sizeof(ui32)*(width/2)*(height/2));
        cudaMalloc((void**)&dtl, 3*sizeof(ui32)*(width/2)*(height/2));
        cudaMalloc((void**)&dtr, 3*sizeof(ui32)*(width/2)*(height/2));
-
-       cudaMemcpyAsync(dbl,bl,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyHostToDevice,stream[1]);
-       cudaMemcpyAsync(dbr,bl,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyHostToDevice,stream[2]);
-       cudaMemcpyAsync(dtl,bl,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyHostToDevice,stream[3]);
-       cudaMemcpyAsync(dtr,bl,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyHostToDevice,stream[4]);
+       
+       cudaMemcpy(dbl,bl,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyHostToDevice);
+       cudaMemcpy(dbr,bl,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyHostToDevice);
+       cudaMemcpy(dtl,bl,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyHostToDevice);
+       cudaMemcpy(dtr,bl,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyHostToDevice);
     
        dim3 Threads_Per_Blocks(32, 32);
        dim3 Num_Blocks(3 *(width/2)/Threads_Per_Blocks.x, (height/2)/Threads_Per_Blocks.y);
 
-       saturation_r<<<Num_Blocks,Threads_Per_Blocks,0,stream[1]>>>(dbl,(width/2)*(height/2));
-       saturation_b<<<Num_Blocks,Threads_Per_Blocks,0,stream[2]>>>(dbr,(width/2)*(height/2));
-       saturation_g<<<Num_Blocks,Threads_Per_Blocks,0,stream[3]>>>(dtl,(width/2)*(height/2));
-       grey_img<<<Num_Blocks,Threads_Per_Blocks,0,stream[4]>>>(dtr,(width/2),(height/2));
+       saturation_r<<<Num_Blocks,Threads_Per_Blocks,0,stream[1]>>>(dbl,width/2,height/2);
+       saturation_b<<<Num_Blocks,Threads_Per_Blocks,0,stream[2]>>>(dbr,width/2,height/2);
+       saturation_g<<<Num_Blocks,Threads_Per_Blocks,0,stream[3]>>>(dtl,width/2,height/2);
+       grey_img<<<Num_Blocks,Threads_Per_Blocks,0,stream[4]>>>(dtr,width/2,height/2);
 
-       cudaMemcpyAsync(bl,dbl,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyDeviceToHost,stream[1]);
-       cudaMemcpyAsync(br,dbr,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyDeviceToHost,stream[2]);
-       cudaMemcpyAsync(tl,dtl,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyDeviceToHost,stream[3]);
-       cudaMemcpyAsync(tr,dtr,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyDeviceToHost,stream[4]);
+       cudaMemcpy(bl,dbl,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyDeviceToHost);
+       cudaMemcpy(br,dbr,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyDeviceToHost);
+       cudaMemcpy(tl,dtl,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyDeviceToHost);
+       cudaMemcpy(tr,dtr,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyDeviceToHost);
 
        cudaDeviceSynchronize();
 
-       for(int j = 0; j < width/2; j++)
+      for(int j = 0; j < width/2; j++)
        {
-           for(int k = 0; k < width/2; k++)
+           for(int k = 0; k < height/2; k++)
            {
               img[(k*width+j)*3+0] = bl[(k*width/2+j)*3+0];
               img[(k*width+j)*3+1] = bl[(k*width/2+j)*3+1];
