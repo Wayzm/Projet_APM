@@ -296,25 +296,27 @@ int main(int argc, char** argv){
           cudaStreamCreate(&stream[s]);
        }
        FIBITMAP *split = FreeImage_Rescale(bitmap,width/2,height/2,FILTER_BOX);
-       ui32* small = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
+       /*ui32* small = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
        ui32* bl = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
        ui32* br = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
        ui32* tl = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
-       ui32* tr = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
-       /*ui32* bl;
+       ui32* tr = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));*/
+       ui32* small;
+       cudaMallocHost((void**)&small,3*sizeof(ui32)*(width/2)*(height/2));
+       ui32* bl;
        cudaMallocHost((void**)&bl,3*sizeof(ui32)*(width/2)*(height/2));
        ui32* br;
        cudaMallocHost((void**)&br,3*sizeof(ui32)*(width/2)*(height/2));
        ui32* tl;
        cudaMallocHost((void**)&tl,3*sizeof(ui32)*(width/2)*(height/2));
        ui32* tr;
-       cudaMallocHost((void**)&tr,3*sizeof(ui32)*(width/2)*(height/2));*/
+       cudaMallocHost((void**)&tr,3*sizeof(ui32)*(width/2)*(height/2));
 
        BYTE *bits = (BYTE*)FreeImage_GetBits(split);
-       for (ui32 y = 0U; y < height; ++y){
+       for (ui32 y = 0U; y < height/2; ++y){
           BYTE *pixel = (BYTE*)bits;
-          for (ui32 x = 0U; x < width; ++x){
-             int idx = ((y * (width)) + x) * 3;
+          for (ui32 x = 0U; x < width/2; ++x){
+             int idx = ((y * (width/2)) + x) * 3;
              small[idx + 0] = pixel[FI_RGBA_RED];
              small[idx + 1] = pixel[FI_RGBA_GREEN];
              small[idx + 2] = pixel[FI_RGBA_BLUE];
@@ -338,7 +340,7 @@ int main(int argc, char** argv){
        dim3 Num_Blocks(3 *(width/2)/Threads_Per_Blocks.x, (height/2)/Threads_Per_Blocks.y);
 
        cudaMemcpyAsync(dbl,small,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyHostToDevice,stream[1]);
-       saturation_r<<<Num_Blocks,Threads_Per_Blocks,0,stream[1]>>>(dbl,(width/2),(height/2));
+       saturation_r<<<Num_Blocks,Threads_Per_Blocks,0,stream[1]>>>(dbl,(width/2)*(height/2));
        cudaMemcpyAsync(bl,dbl,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyDeviceToHost,stream[1]);
 
        cudaMemcpyAsync(dbr,small,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyHostToDevice,stream[2]);
@@ -358,7 +360,7 @@ int main(int argc, char** argv){
 
        for(int j = 0; j < width/2; j++)
        {
-           for(int k = 0; k < width/2; k++)
+           for(int k = 0; k < height/2; k++)
            {
               img[(k*width+j)*3+0] = bl[(k*width/2+j)*3+0];
               img[(k*width+j)*3+1] = bl[(k*width/2+j)*3+1];
