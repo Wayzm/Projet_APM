@@ -30,8 +30,10 @@ __device__ int get_id(void)
 
 __global__ void saturation_r(ui32* d_img, size_t size)
 {
+    //On recupere l'ide du thread
     int id = get_id();
 
+    //On passe la case +2 (rouge) a 255 pour saturer la couleur rouge
     if(id < size)
     {
         d_img[id*3+0] = 255;
@@ -40,8 +42,10 @@ __global__ void saturation_r(ui32* d_img, size_t size)
 
 __global__ void saturation_g(ui32* d_img, size_t size)
 {
+    //On recupere l'id du thread
     int id = get_id();
 
+    //On passe la case +2 (vert) a 255 pour saturer la couleur verte
     if(id < size)
     {
 	d_img[id*3+1] = 255;
@@ -50,8 +54,10 @@ __global__ void saturation_g(ui32* d_img, size_t size)
 
 __global__ void saturation_b(ui32* d_img, size_t size)
 {
+    //On recupere l'id du thread
     int id = get_id();
 
+    //On passe la case +2 (bleu) a 255 pour saturer la couleur bleu
     if(id < size)
     {
         d_img[id*3+2] = 255;
@@ -60,7 +66,10 @@ __global__ void saturation_b(ui32* d_img, size_t size)
 
 __global__ void flou(ui32* d_img, size_t size, size_t width)
 {
+   //On recupere l'id du thread
    int id = get_id();
+
+   //On creer des valeurs qui vont nous permettre de recuperer les valeurs pour la modification
    ui32 img0, img1, img2;
    if(id < size)
    {
@@ -68,6 +77,7 @@ __global__ void flou(ui32* d_img, size_t size, size_t width)
       img1 = d_img[id*3+1];
       img2 = d_img[id*3+2];
 
+   //On utilise plusieurs if pour être sur de ne pas sortir du tableau alloue
       if(id+1 < size)
       {
          img0 += d_img[id*3+0+3];
@@ -94,10 +104,12 @@ __global__ void flou(ui32* d_img, size_t size, size_t width)
       }
    }
 
+   //On fait la moyenne des valeurs obtenue
    img0 /= 5;
    img1 /= 5;
    img2 /= 5;
 
+   //On copie la valeur dans les cases du tableau pour modifier chaque composantes des pixels
    d_img[id*3+0] = img0;
    d_img[id*3+1] = img1;
    d_img[id*3+2] = img2;
@@ -118,22 +130,19 @@ __global__ void horizontal_sym(ui32* d_img, ui32* d_tmp, ui32 width, ui32 height
 
 __global__ void grey_img(ui32* d_img, ui32 width, ui32 height){
     
+    //Compute thread id
     int id = get_id();
-    // Compute thread id
-    // Compute greyed pixel
+      
+    //On verifie que le thread fait bien son calcul sur une case du tableau
     if(id < width*height)
     {
+       //On fait le calcul pour faire une nuance de gris
        float val  = d_img[id*3+0] * 0.299 + d_img[id*3+1] * 0.587 + d_img[id*3+2] * 0.114;
-       // Copy back the greyed pixel
+       //On copie les valeurs calcule dans les cases du tableau
        d_img[id*3+0] = val;
        d_img[id*3+1] = val;
        d_img[id*3+2] = val;
    }
-}
-
-__global__ void pop_art()
-{
-
 }
 
 int main(int argc, char** argv){
@@ -188,6 +197,8 @@ int main(int argc, char** argv){
         perror("Memory allocation for temporary array failed.\n");
         exit(1);
     }
+
+    //On alloue la memoire sur le GPU pour pouvoir utiliser ces tableaux plus tard
     // RED, BLUE and GREEN pixels of IMG on device
     cudaMalloc((void**)&d_img, 3 * IMG_SIZE);
     cudaMalloc((void**)&d_tmp, 3 * IMG_SIZE);
@@ -195,6 +206,7 @@ int main(int argc, char** argv){
     cudaMalloc((void**)&dg, IMG_SIZE);
     cudaMalloc((void**)&db, IMG_SIZE);
 
+   //On transforme notre image en tableau de pixel pour pouvoir le modifier
    BYTE *bits = (BYTE*)FreeImage_GetBits(bitmap);
     for (ui32 y = 0U; y < height; ++y){
       BYTE *pixel = (BYTE*)bits;
@@ -222,6 +234,8 @@ int main(int argc, char** argv){
     //cudaMemcpy(dg, hg, IMG_SIZE, cudaMemcpyHostToDevice);
     //cudaMemcpy(db, hb, IMG_SIZE, cudaMemcpyHostToDevice);
 
+    //On copie notre tableau qui contient les pixels de l'image sur le GPU et on verifie qu'aucune erreur ne
+    // se produise
     cudaError_t err = cudaMemcpy(d_img,img,3*IMG_SIZE,cudaMemcpyHostToDevice);
     if(err != cudaSuccess)
        printf("probleme dans cudaMemcpy entre\n");
@@ -231,46 +245,56 @@ int main(int argc, char** argv){
 
     if(!strcmp(argv[i],"saturation_r"))
     {
-       printf("on est ici\n");
+       //initialisation de la grille et du bloc
        dim3 Threads_Per_Blocks(32, 32);
        dim3 Num_Blocks(width/32+1, height/32+1);   
 
+       //lancement du kernel et copie de la mémoire modifé dans le kernel sur l'hote
        saturation_r<<<Num_Blocks,Threads_Per_Blocks>>>(d_img,width*height);
        cudaMemcpy(img,d_img,3*IMG_SIZE,cudaMemcpyDeviceToHost);
    }
 
    if(!strcmp(argv[i],"saturation_g"))
    {
+       //initialisation de la grille et du bloc
        dim3 Threads_Per_Blocks(32, 32);
        dim3 Num_Blocks(3 * width/Threads_Per_Blocks.x, height/Threads_Per_Blocks.y);    
 
+       //lancement du kernel et copie de la mémoire modifé dans le kernel sur l'hote
        saturation_g<<<Num_Blocks,Threads_Per_Blocks>>>(d_img,width*height);
        cudaMemcpy(img,d_img,3*IMG_SIZE,cudaMemcpyDeviceToHost);
    }
 
    if(!strcmp(argv[i],"saturation_b"))
    {
+       //initialisation de la grille et du bloc
        dim3 Threads_Per_Blocks(32, 32);
        dim3 Num_Blocks(3 * width/Threads_Per_Blocks.x, height/Threads_Per_Blocks.y);    
 
+       //lancement du kernel et copie de la mémoire modifé dans le kernel sur l'hote
        saturation_b<<<Num_Blocks,Threads_Per_Blocks>>>(d_img,width*height);
        cudaMemcpy(img,d_img,3*IMG_SIZE,cudaMemcpyDeviceToHost);
    }
 
    if(!strcmp(argv[i],"grey_img"))
    {
+       //initialisation de la grille et du bloc
        dim3 Threads_Per_Blocks(32, 32);
        dim3 Num_Blocks(3 * width/Threads_Per_Blocks.x, height/Threads_Per_Blocks.y);
+    
+       //lancement du kernel et copie de la mémoire modifé dans le kernel sur l'hote
        grey_img<<<Num_Blocks,Threads_Per_Blocks>>>(d_img, width, height);
        cudaMemcpy(img,d_img,3*IMG_SIZE,cudaMemcpyDeviceToHost);
    }
 
    if(!strcmp(argv[i],"flou"))
    {
-       printf("on est dans le flou\n");
+       //initialisation de la grille et du bloc
        dim3 Threads_Per_Blocks(32, 32);
        dim3 Num_Blocks(width/Threads_Per_Blocks.x+1, height/Threads_Per_Blocks.y+1); 
-       
+    
+       //lancement du kernel 100 fois pour que le flou s'applique bien 
+       //et copie de la mémoire modifé dans le kernel sur l'hote   
        for(int k = 0; k < 10; k++)
        {
           flou<<<Num_Blocks,Threads_Per_Blocks>>>(d_img,width*height,width);
@@ -280,30 +304,44 @@ int main(int argc, char** argv){
 
    if(!strcmp(argv[i],"sym"))
    {
+       //initialisation de la grille et du bloc
        dim3 Threads_Per_Blocks(32, 32);
        dim3 Num_Blocks(3 * width/Threads_Per_Blocks.x, height/Threads_Per_Blocks.y);
+       
+       //lancement du kernel et copie de la mémoire modifé dans le kernel sur l'hote
        horizontal_sym<<<Num_Blocks,Threads_Per_Blocks>>>(d_img,d_tmp,width,height);
-       cudaMemcpy(d_img,d_tmp,3*IMG_SIZE,cudaMemcpyDeviceToDevice);
-       cudaMemcpy(img,d_img,3*IMG_SIZE,cudaMemcpyDeviceToHost);
+       cudaMemcpy(img,d_tmp,3*IMG_SIZE,cudaMemcpyDeviceToHost);
    }
 
    if(!strcmp(argv[i],"pop_art"))
    {
+       //Ici on va utiliser les streams afin de pouvoir faire chaque partie de l'image (separe en 4)
+       // en parallèle et aucune partie de l'image n'aura a attendre la fin de l'execution des autres
+       
+       //Creation des streams
        cudaStream_t stream[5];
        for(int s = 1; s < 5; s++)
        {
           cudaStreamCreate(&stream[s]);
        }
+ 
+       //On utilise la librairie pour rescale l'image pour en mettre 4 sur une seule image
        FIBITMAP *split = FreeImage_Rescale(bitmap,width/2,height/2,FILTER_BOX);
 
+       //On récupere le pitch, la largeur et la hauteur de l'image modifie
        ui32 spitch = FreeImage_GetPitch(split);
        ui32 swidth = FreeImage_GetWidth(split);
        ui32 sheight = FreeImage_GetHeight(split);
+
+       //malloc que l'on avait avant les streams, on ne les utilise plus car on a besoin de memoire punaise
        /*ui32* small = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
        ui32* bl = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
        ui32* br = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
        ui32* tl = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
        ui32* tr = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));*/
+
+       //On utilise cudaMallocHost pour faire de la mémoire punaise ce qui nous permettra de
+       //faire des Memcpy asynchrone
        ui32* small;
        cudaMallocHost((void**)&small,3*sizeof(ui32)*(width/2)*(height/2));
        ui32* bl;
@@ -315,6 +353,7 @@ int main(int argc, char** argv){
        ui32* tr;
        cudaMallocHost((void**)&tr,3*sizeof(ui32)*(width/2)*(height/2));
 
+       //On transforme l'image plus petite en tableau pour avoir acces a chaque pixels
        BYTE *bits = (BYTE*)FreeImage_GetBits(split);
        for (ui32 y = 0U; y < sheight; ++y){
           BYTE *pixel = (BYTE*)bits;
@@ -334,13 +373,21 @@ int main(int argc, char** argv){
        ui32* dtl;
        ui32* dtr;
        
+
+       //On malloc la memoire sur le GPU pour pouvoir faire nos calculs
        cudaMalloc((void**)&dbl, 3*sizeof(ui32)*swidth*sheight);
        cudaMalloc((void**)&dbr, 3*sizeof(ui32)*swidth*sheight);
        cudaMalloc((void**)&dtl, 3*sizeof(ui32)*swidth*sheight);
        cudaMalloc((void**)&dtr, 3*sizeof(ui32)*swidth*sheight);
 
+       //On calcule la taille de la grille et du bloc
        dim3 Threads_Per_Blocks(32, 32);
        dim3 Num_Blocks(swidth/32+1, sheight/32+1);
+
+       //Pour chaque partie de notre image on copie notre petite image dans un tableau specifique a 
+       //chaque stream, chaque stream fera ensuite l'operation demande sans attendre l'execution des autres
+       //streams. Et enfin quand un stream a fini l'execution de son kernel il copie sa memoire dans un tableau
+       //chaque tableau sera ensuite merge a un grand tableau pour reformer une image de la taille originale       
 
        cudaMemcpyAsync(dbl,small,3*sizeof(ui32)*swidth*sheight,cudaMemcpyHostToDevice,stream[1]);
        saturation_r<<<Num_Blocks,Threads_Per_Blocks,0,stream[1]>>>(dbl,swidth*sheight);
@@ -358,9 +405,13 @@ int main(int argc, char** argv){
        grey_img<<<Num_Blocks,Threads_Per_Blocks,0,stream[4]>>>(dtr,swidth,sheight);
        cudaMemcpyAsync(tr,dtr,3*sizeof(ui32)*swidth*sheight,cudaMemcpyDeviceToHost,stream[4]);
     
+       //On synchronize ici pour etre sur que tout les streams ont bien fait leur operations et
+       //qu'ils ont bien copie leur tableaux sur le host
 
        cudaDeviceSynchronize();
 
+       //Chaque double boucle for permet merge les tableau dans le tableau img pour refaire l'image a la fin
+      
        for(int j = 0; j < width/2; j++)
        {
            for(int k = 0; k < height/2; k++)
@@ -405,14 +456,12 @@ int main(int argc, char** argv){
 
   }
 
+   //On récupère la derniere erreur pour voir si le dernier appelle cuda qui a ete fait a fonctionne ou non 
    err = cudaGetLastError();
    if(err != cudaSuccess)
         printf("probleme dans cudaMemcpy sortie: %s\n",cudaGetErrorString(err));
 
-   //err = cudaMemcpy(img,d_tmp,3*IMG_SIZE,cudaMemcpyDeviceToHost);
-   //if(err != cudaSuccess)
-       // printf("probleme dans cudaMemcpy sortie\n");
-
+   //On retransforme notre tableau de bit en image
     bits = (BYTE*)FreeImage_GetBits(bitmap);
     for(int y =0; y<height; y++)
     {
