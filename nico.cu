@@ -297,9 +297,9 @@ int main(int argc, char** argv){
        }
        FIBITMAP *split = FreeImage_Rescale(bitmap,width/2,height/2,FILTER_BOX);
 
-       ui32 spitch = GreeImage_GetPitch(split);
-       ui32 swidth = GreeImage_GetWidth(split);
-       ui32 sheight = GreeImage_GetHeight(split);
+       ui32 spitch = FreeImage_GetPitch(split);
+       ui32 swidth = FreeImage_GetWidth(split);
+       ui32 sheight = FreeImage_GetHeight(split);
        /*ui32* small = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
        ui32* bl = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
        ui32* br = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
@@ -344,7 +344,7 @@ int main(int argc, char** argv){
        dim3 Num_Blocks(swidth/32+1, sheight/32+1);
 
        cudaMemcpyAsync(dbl,small,3*sizeof(ui32)*swidth*sheight,cudaMemcpyHostToDevice,stream[1]);
-       saturation_r<<<Num_Blocks,Threads_Per_Blocks,0,stream[1]>>>(dbl,swidth,sheight);
+       saturation_r<<<Num_Blocks,Threads_Per_Blocks,0,stream[1]>>>(dbl,swidth*sheight);
        cudaMemcpyAsync(bl,dbl,3*sizeof(ui32)*swidth*sheight,cudaMemcpyDeviceToHost,stream[1]);
 
        cudaMemcpyAsync(dbr,small,3*sizeof(ui32)*swidth*sheight,cudaMemcpyHostToDevice,stream[2]);
