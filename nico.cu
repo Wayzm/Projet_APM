@@ -132,11 +132,6 @@ __global__ void grey_img(ui32* d_img, ui32 width, ui32 height){
    }
 }
 
-__global__ void pop_art()
-{
-
-}
-
 int main(int argc, char** argv){
 
     FreeImage_Initialise();
@@ -290,101 +285,107 @@ int main(int argc, char** argv){
 
    if(!strcmp(argv[i],"pop_art"))
    {
-       cudaStream_t stream[5];
-       for(int s = 1; s < 5; s++)
-       {
-          cudaStreamCreate(&stream[s]);
-       }
        FIBITMAP *split = FreeImage_Rescale(bitmap,width/2,height/2,FILTER_BOX);
-       ui32* bl = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
-       ui32* br = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
-       ui32* tl = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
-       ui32* tr = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
+       cudaStream_t stream[5]
+       for(int s = 0; s < 5; s++)
+       {
+            cudaStreamCreate(&stream[s]);
+       }
+
+       ui32 *small;
+       cudaMallocHost(&small,3*sizeof(ui32)*(width/2)*(height/2));
+       ui32 *bl;
+       cudaMallocHost(&bl,3*sizeof(ui32)*(width/2)*(height/2));
+       ui32 *br;
+       cudaMallocHost(&br,3*sizeof(ui32)*(width/2)*(height/2));
+       ui32 *tl;
+       cudaMallocHost(&tl,3*sizeof(ui32)*(width/2)*(height/2));
+       ui32 *tr;
+       cudaMallocHost(&tr,3*sizeof(ui32)*(width/2)*(height/2));
 
        BYTE *bits = (BYTE*)FreeImage_GetBits(split);
-       for (ui32 y = 0U; y < height; ++y){
-          BYTE *pixel = (BYTE*)bits;
-          for (ui32 x = 0U; x < width; ++x){
-             int idx = ((y * (width)) + x) * 3;
-             bl[idx + 0] = pixel[FI_RGBA_RED];
-             bl[idx + 1] = pixel[FI_RGBA_GREEN];
-             bl[idx + 2] = pixel[FI_RGBA_BLUE];
-             pixel += 3;
-          }
-          // next line
-          bits += pitch;
-       }
-       
-       ui32* dbl;
-       ui32* dbr;
-       ui32* dtl;
-       ui32* dtr;
-       
-       cudaMalloc((void**)&dbl, 3*sizeof(ui32)*(width/2)*(height/2));
-       cudaMalloc((void**)&dbr, 3*sizeof(ui32)*(width/2)*(height/2));
-       cudaMalloc((void**)&dtl, 3*sizeof(ui32)*(width/2)*(height/2));
-       cudaMalloc((void**)&dtr, 3*sizeof(ui32)*(width/2)*(height/2));
+        for (ui32 y = 0U; y < height/2; ++y){
+            BYTE *pixel = (BYTE*)bits;
+            for (ui32 x = 0U; x < width/2; ++x){
+                int idx = ((y * width/2) + x) * 3;
+                small[idx + 0] = pixel[FI_RGBA_RED];
+                small[idx + 1] = pixel[FI_RGBA_GREEN];
+                small[idx + 2] = pixel[FI_RGBA_BLUE];
+                pixel += 3;
+            }
+            // next line
+            bits += pitch;
+        }
 
-       cudaMemcpyAsync(dbl,bl,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyHostToDevice,stream[1]);
-       cudaMemcpyAsync(dbr,bl,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyHostToDevice,stream[2]);
-       cudaMemcpyAsync(dtl,bl,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyHostToDevice,stream[3]);
-       cudaMemcpyAsync(dtr,bl,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyHostToDevice,stream[4]);
-    
-       dim3 Threads_Per_Blocks(32, 32);
-       dim3 Num_Blocks(3 *(width/2)/Threads_Per_Blocks.x, (height/2)/Threads_Per_Blocks.y);
+        ui32* dbl;
+        cudaMalloc(&dbl,3*sizeof(ui32)*(width/2)*(height/2));
+        ui32* dbr;
+        cudaMalloc(&dbr,3*sizeof(ui32)*(width/2)*(height/2));
+        ui32* dtl;
+        cudaMalloc(&dtl,3*sizeof(ui32)*(width/2)*(height/2));
+        ui32* dtr;
+        cudaMalloc(&dtr,3*sizeof(ui32)*(width/2)*(height/2));
 
-       saturation_r<<<Num_Blocks,Threads_Per_Blocks,0,stream[1]>>>(dbl,(width/2)*(height/2));
-       saturation_b<<<Num_Blocks,Threads_Per_Blocks,0,stream[2]>>>(dbr,(width/2)*(height/2));
-       saturation_g<<<Num_Blocks,Threads_Per_Blocks,0,stream[3]>>>(dtl,(width/2)*(height/2));
-       grey_img<<<Num_Blocks,Threads_Per_Blocks,0,stream[4]>>>(dtr,(width/2),(height/2));
+        dim3 Threads_Per_Blocks(32, 32);
+        dim3 Num_Blocks(width/32+1, height/32+1);
 
-       cudaMemcpyAsync(bl,dbl,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyDeviceToHost,stream[1]);
-       cudaMemcpyAsync(br,dbr,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyDeviceToHost,stream[2]);
-       cudaMemcpyAsync(tl,dtl,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyDeviceToHost,stream[3]);
-       cudaMemcpyAsync(tr,dtr,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyDeviceToHost,stream[4]);
+        cudaMemcpyAsync(dbl,small,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyHostToDevice,stream[1]);
+        saturation_r<<<Num_Blocks,Threads_Per_Blocks,0,stream[1]>>>(dbl,(width/2)*(height/2)); 
+        cudaMemcpyAsync(bl,dbl,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyDeviceToHost,stream[1]);  
 
-       cudaDeviceSynchronize();
+        cudaMemcpyAsync(dbr,small,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyHostToDevice,stream[2]);
+        saturation_g<<<Num_Blocks,Threads_Per_Blocks,0,stream[2]>>>(dbl,(width/2)*(height/2)); 
+        cudaMemcpyAsync(br,dbr,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyDeviceToHost,stream[2]);  
 
-       for(int j = 0; j < width/2; j++)
-       {
-           for(int k = 0; k < width/2; k++)
-           {
-              img[(k*width+j)*3+0] = bl[(k*width/2+j)*3+0];
-              img[(k*width+j)*3+1] = bl[(k*width/2+j)*3+1];
-              img[(k*width+j)*3+2] = bl[(k*width/2+j)*3+2];
-           } 
-       }
+        cudaMemcpyAsync(dtl,small,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyHostToDevice,stream[3]);
+        saturation_b<<<Num_Blocks,Threads_Per_Blocks,0,stream[3]>>>(dbl,(width/2)*(height/2)); 
+        cudaMemcpyAsync(tl,dtl,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyDeviceToHost,stream[3]);  
 
-       for(int j = 0; j < width/2; j++)
-       {
-           for(int k = 0; k < height/2; k++)
-           {
-              img[(j+width/2+k*width)*3+0] = br[(k*width/2+j)*3+0];
-              img[(j+width/2+k*width)*3+1] = br[(k*width/2+j)*3+1];
-              img[(j+width/2+k*width)*3+2] = br[(k*width/2+j)*3+2];
-           }
-       }
+        cudaMemcpyAsync(dtr,small,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyHostToDevice,stream[4]);
+        grey_img<<<Num_Blocks,Threads_Per_Blocks,0,stream[4]>>>(dbl,(width/2)*(height/2)); 
+        cudaMemcpyAsync(tr,dtr,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyDeviceToHost,stream[4]);  
 
-       for(int j = 0; j < width/2; j++)
-       {
-           for(int k = 0; k < height/2; k++)
-           {
-              img[(j+(k+height/2)*width)*3+0] = tl[(k*width/2+j)*3+0];
-              img[(j+(k+height/2)*width)*3+1] = tl[(k*width/2+j)*3+1];
-              img[(j+(k+height/2)*width)*3+2] = tl[(k*width/2+j)*3+2];
-           }
-       }
+        cudaDeviceSynchronize();
 
-       for(int j = 0; j < width/2; j++)
-       {
-           for(int k = 0; k < height/2; k++)
-           {
-              img[(j+width/2+(k+height/2)*width)*3+0] = tr[(k*width/2+j)*3+0];
-              img[(j+width/2+(k+height/2)*width)*3+1] = tr[(k*width/2+j)*3+1];
-              img[(j+width/2+(k+height/2)*width)*3+2] = tr[(k*width/2+j)*3+2];
-           }
-       }
+        for(int j = 0; j < width/2; j++)
+        {
+            for(int k = 0; k < width/2; k++)
+            {
+                img[(k*width+j)*3+0] = bl[(k*width/2+x)*3+0];
+                img[(k*width+j)*3+1] = bl[(k*width/2+x)*3+1];
+                img[(k*width+j)*3+2] = bl[(k*width/2+x)*3+2];
+            }
+        }
 
+        for(int j = 0; j < width/2; j++)
+        {
+            for(int k = 0; k < width/2; k++)
+            {
+                img[(k*width+j+width/2)*3+0] = br[(k*width/2+x)*3+0];
+                img[(k*width+j+width/2)*3+1] = br[(k*width/2+x)*3+1];
+                img[(k*width+j+width/2)*3+2] = br[(k*width/2+x)*3+2];
+            }
+        } 
+
+        for(int j = 0; j < width/2; j++)
+        {
+            for(int k = 0; k < width/2; k++)
+            {
+                img[((k+height/2)*width+j)*3+0] = tl[(k*width/2+x)*3+0];
+                img[((k+height/2)*width+j)*3+1] = tl[(k*width/2+x)*3+1];
+                img[((k+height/2)*width+j)*3+2] = tl[(k*width/2+x)*3+2];
+            }
+        } 
+
+        for(int j = 0; j < width/2; j++)
+        {
+            for(int k = 0; k < width/2; k++)
+            {
+                img[((k+height/2)*width+j+width/2)*3+0] = tr[(k*width/2+x)*3+0];
+                img[((k+height/2)*width+j+width/2)*3+1] = tr[(k*width/2+x)*3+1];
+                img[((k+height/2)*width+j+width/2)*3+2] = tr[(k*width/2+x)*3+2];
+            }
+        } 
     }
 
   }
