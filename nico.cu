@@ -300,20 +300,21 @@ int main(int argc, char** argv){
        ui32 spitch = GreeImage_GetPitch(split);
        ui32 swidth = GreeImage_GetWidth(split);
        ui32 sheight = GreeImage_GetHeight(split);
-
-       ui32* small = (ui32*)malloc(3*sizeof(ui32)*(swidth)*sheight);
-       ui32* bl = (ui32*)malloc(3*sizeof(ui32)*(swidth)*sheight);
-       ui32* br = (ui32*)malloc(3*sizeof(ui32)*(swidth)*sheight);
-       ui32* tl = (ui32*)malloc(3*sizeof(ui32)*(swidth)*sheight);
-       ui32* tr = (ui32*)malloc(3*sizeof(ui32)*(swidth)*sheight);
-       /*ui32* bl;
+       /*ui32* small = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
+       ui32* bl = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
+       ui32* br = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
+       ui32* tl = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
+       ui32* tr = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));*/
+       ui32* small;
+       cudaMallocHost((void**)&small,3*sizeof(ui32)*(width/2)*(height/2));
+       ui32* bl;
        cudaMallocHost((void**)&bl,3*sizeof(ui32)*(width/2)*(height/2));
        ui32* br;
        cudaMallocHost((void**)&br,3*sizeof(ui32)*(width/2)*(height/2));
        ui32* tl;
        cudaMallocHost((void**)&tl,3*sizeof(ui32)*(width/2)*(height/2));
        ui32* tr;
-       cudaMallocHost((void**)&tr,3*sizeof(ui32)*(width/2)*(height/2));*/
+       cudaMallocHost((void**)&tr,3*sizeof(ui32)*(width/2)*(height/2));
 
        BYTE *bits = (BYTE*)FreeImage_GetBits(split);
        for (ui32 y = 0U; y < sheight; ++y){
@@ -363,7 +364,7 @@ int main(int argc, char** argv){
 
        for(int j = 0; j < width/2; j++)
        {
-           for(int k = 0; k < width/2; k++)
+           for(int k = 0; k < height/2; k++)
            {
               img[(k*width+j)*3+0] = bl[(k*width/2+j)*3+0];
               img[(k*width+j)*3+1] = bl[(k*width/2+j)*3+1];
