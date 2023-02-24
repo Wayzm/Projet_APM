@@ -60,59 +60,56 @@ __global__ void saturation_b(ui32* d_img, size_t size)
 
 __global__ void flou(ui32* d_img, size_t size, size_t width)
 {
+   int id = get_id();
    ui32 img0, img1, img2;
-
-   size_t y = blockIdx.y * blockDim.y + threadIdx.y;
-   size_t x = blockIdx.x * blockDim.x + threadIdx.x;
-
-   size_t idx = (y*width+x)*3;
-   size_t idl = (y*width+x-1)*3;
-   size_t idr = (y*width+x+1)*3;
-   size_t idu = ((y-1)*width+x)*3;
-   size_t idd = ((y+1)*width+x)*3;
-
-   size_t cpt = 1;
-
-   if(idx < size*3)
+   if(id < size)
    {
-        img0 += d_img[idx];
-        img1 += d_img[idx+1];
-        img2 += d_img[idx+2];
+      img0 = d_img[id*3+0];
+      img1 = d_img[id*3+1];
+      img2 = d_img[id*3+2];
 
-        if(idl >= 0 && idl < size*3)
-        {
-            img0 += img[idl];
-            img1 += img[idl+1];
-            img2 += img[idl+2];
-            cpt++;
-        }
-        if(idr >= 0 && idr < size*3)
-        {
-            img0 += img[idr];
-            img1 += img[idr+1];
-            img2 += img[idr+2];
-            cpt++;
-        }
-        if(idu >= 0 && idu < size*3)
-        {
-            img0 += img[idu];
-            img1 += img[idu+1];
-            img2 += img[idu+2];
-            cpt++;
-        }
-        if(idd >= 0 && idd < size*3)
-        {
-            img0 += img[idd];
-            img1 += img[idd+1];
-            img2 += img[idd+2];
-            cpt++;
-        }
-
-        d_img[idx] = img0/cpt;
-        d_img[idx+1] = img1/cpt;
-        d_img[idx+2] = img2/cpt;
+      if(id+1 < size)
+      {
+         img0 += d_img[id*3+0+3];
+         img1 += d_img[id*3+1+3];
+         img2 += d_img[id*3+2+3];
+      }
+      if(id-1 < size && id-1 > 0)
+      {
+         img0 += d_img[id*3+0-3];
+         img1 += d_img[id*3+1-3];
+         img2 += d_img[id*3+2-3];
+      }
+      if(id+width < size)
+      {
+         img0 += d_img[(id+width)*3+0];
+         img1 += d_img[(id+width)*3+1];
+         img2 += d_img[(id+width)*3+2];
+      }
+      if(id-width < size && id-width > 0)
+      {
+         img0 += d_img[(id-width)*3+0];
+         img1 += d_img[(id-width)*3+1];
+         img2 += d_img[(id-width)*3+2];
+      }
    }
-}onst ui32 xT = x;
+
+   img0 /= 5;
+   img1 /= 5;
+   img2 /= 5;
+
+   d_img[id*3+0] = img0;
+   d_img[id*3+1] = img1;
+   d_img[id*3+2] = img2;
+}
+__global__ void horizontal_sym(ui32* d_img, ui32* d_tmp, ui32 width, ui32 height){
+
+    // Compute thread id
+    const ui32 x = threadIdx.x + blockDim.x * blockIdx.x;
+    const ui32 y = threadIdx.y + blockDim.y * blockIdx.y;
+    const ui32 idx = y * (3 * width) + x;
+    // Compute target destination
+    const ui32 xT = x;
     const ui32 yT = height - y;
     const ui32 idxT = yT * 3 * width + xT;
     // Flipping the image
@@ -272,9 +269,9 @@ int main(int argc, char** argv){
    {
        printf("on est dans le flou\n");
        dim3 Threads_Per_Blocks(32, 32);
-       dim3 Num_Blocks(3 * width/Threads_Per_Blocks.x, height/Threads_Per_Blocks.y); 
+       dim3 Num_Blocks(width/Threads_Per_Blocks.x+1, height/Threads_Per_Blocks.y+1); 
        
-       for(int k = 0; k < 100; k++)
+       for(int k = 0; k < 10; k++)
        {
           flou<<<Num_Blocks,Threads_Per_Blocks>>>(d_img,width*height,width);
        }
