@@ -296,11 +296,16 @@ int main(int argc, char** argv){
           cudaStreamCreate(&stream[s]);
        }
        FIBITMAP *split = FreeImage_Rescale(bitmap,width/2,height/2,FILTER_BOX);
-       ui32* small = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
-       ui32* bl = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
-       ui32* br = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
-       ui32* tl = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
-       ui32* tr = (ui32*)malloc(3*sizeof(ui32)*(width/2)*(height/2));
+
+       ui32 spitch = GreeImage_GetPitch(split);
+       ui32 swidth = GreeImage_GetWidth(split);
+       ui32 sheight = GreeImage_GetHeight(split);
+
+       ui32* small = (ui32*)malloc(3*sizeof(ui32)*(swidth)*sheight);
+       ui32* bl = (ui32*)malloc(3*sizeof(ui32)*(swidth)*sheight);
+       ui32* br = (ui32*)malloc(3*sizeof(ui32)*(swidth)*sheight);
+       ui32* tl = (ui32*)malloc(3*sizeof(ui32)*(swidth)*sheight);
+       ui32* tr = (ui32*)malloc(3*sizeof(ui32)*(swidth)*sheight);
        /*ui32* bl;
        cudaMallocHost((void**)&bl,3*sizeof(ui32)*(width/2)*(height/2));
        ui32* br;
@@ -311,17 +316,17 @@ int main(int argc, char** argv){
        cudaMallocHost((void**)&tr,3*sizeof(ui32)*(width/2)*(height/2));*/
 
        BYTE *bits = (BYTE*)FreeImage_GetBits(split);
-       for (ui32 y = 0U; y < height; ++y){
+       for (ui32 y = 0U; y < sheight; ++y){
           BYTE *pixel = (BYTE*)bits;
-          for (ui32 x = 0U; x < width; ++x){
-             int idx = ((y * (width)) + x) * 3;
+          for (ui32 x = 0U; x < swidth; ++x){
+             int idx = ((y * (swidth)) + x) * 3;
              small[idx + 0] = pixel[FI_RGBA_RED];
              small[idx + 1] = pixel[FI_RGBA_GREEN];
              small[idx + 2] = pixel[FI_RGBA_BLUE];
              pixel += 3;
           }
           // next line
-          bits += pitch;
+          bits += spitch;
        }
        
        ui32* dbl;
@@ -329,29 +334,29 @@ int main(int argc, char** argv){
        ui32* dtl;
        ui32* dtr;
        
-       cudaMalloc((void**)&dbl, 3*sizeof(ui32)*(width/2)*(height/2));
-       cudaMalloc((void**)&dbr, 3*sizeof(ui32)*(width/2)*(height/2));
-       cudaMalloc((void**)&dtl, 3*sizeof(ui32)*(width/2)*(height/2));
-       cudaMalloc((void**)&dtr, 3*sizeof(ui32)*(width/2)*(height/2));
+       cudaMalloc((void**)&dbl, 3*sizeof(ui32)*swidth*sheight);
+       cudaMalloc((void**)&dbr, 3*sizeof(ui32)*swidth*sheight);
+       cudaMalloc((void**)&dtl, 3*sizeof(ui32)*swidth*sheight);
+       cudaMalloc((void**)&dtr, 3*sizeof(ui32)*swidth*sheight);
 
        dim3 Threads_Per_Blocks(32, 32);
-       dim3 Num_Blocks(3 *(width/2)/Threads_Per_Blocks.x, (height/2)/Threads_Per_Blocks.y);
+       dim3 Num_Blocks(swidth/32+1, sheight/32+1);
 
-       cudaMemcpyAsync(dbl,small,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyHostToDevice,stream[1]);
-       saturation_r<<<Num_Blocks,Threads_Per_Blocks,0,stream[1]>>>(dbl,(width/2),(height/2));
-       cudaMemcpyAsync(bl,dbl,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyDeviceToHost,stream[1]);
+       cudaMemcpyAsync(dbl,small,3*sizeof(ui32)*swidth*sheight,cudaMemcpyHostToDevice,stream[1]);
+       saturation_r<<<Num_Blocks,Threads_Per_Blocks,0,stream[1]>>>(dbl,swidth,sheight);
+       cudaMemcpyAsync(bl,dbl,3*sizeof(ui32)*swidth*sheight,cudaMemcpyDeviceToHost,stream[1]);
 
-       cudaMemcpyAsync(dbr,small,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyHostToDevice,stream[2]);
-       saturation_b<<<Num_Blocks,Threads_Per_Blocks,0,stream[2]>>>(dbr,(width/2)*(height/2));
-       cudaMemcpyAsync(br,dbr,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyDeviceToHost,stream[2]);
+       cudaMemcpyAsync(dbr,small,3*sizeof(ui32)*swidth*sheight,cudaMemcpyHostToDevice,stream[2]);
+       saturation_b<<<Num_Blocks,Threads_Per_Blocks,0,stream[2]>>>(dbr,swidth*sheight);
+       cudaMemcpyAsync(br,dbr,3*sizeof(ui32)*swidth*sheight,cudaMemcpyDeviceToHost,stream[2]);
 
-       cudaMemcpyAsync(dtl,small,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyHostToDevice,stream[3]);
-       saturation_g<<<Num_Blocks,Threads_Per_Blocks,0,stream[3]>>>(dtl,(width/2)*(height/2));
-       cudaMemcpyAsync(tl,dtl,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyDeviceToHost,stream[3]);
+       cudaMemcpyAsync(dtl,small,3*sizeof(ui32)*swidth*sheight,cudaMemcpyHostToDevice,stream[3]);
+       saturation_g<<<Num_Blocks,Threads_Per_Blocks,0,stream[3]>>>(dtl,swidth*sheight);
+       cudaMemcpyAsync(tl,dtl,3*sizeof(ui32)*swidth*sheight,cudaMemcpyDeviceToHost,stream[3]);
 
-       cudaMemcpyAsync(dtr,small,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyHostToDevice,stream[4]);
-       grey_img<<<Num_Blocks,Threads_Per_Blocks,0,stream[4]>>>(dtr,(width/2),(height/2));
-       cudaMemcpyAsync(tr,dtr,3*sizeof(ui32)*(width/2)*(height/2),cudaMemcpyDeviceToHost,stream[4]);
+       cudaMemcpyAsync(dtr,small,3*sizeof(ui32)*swidth*sheight,cudaMemcpyHostToDevice,stream[4]);
+       grey_img<<<Num_Blocks,Threads_Per_Blocks,0,stream[4]>>>(dtr,swidth,sheight);
+       cudaMemcpyAsync(tr,dtr,3*sizeof(ui32)*swidth*sheight,cudaMemcpyDeviceToHost,stream[4]);
     
 
        cudaDeviceSynchronize();
