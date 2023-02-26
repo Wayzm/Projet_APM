@@ -107,6 +107,12 @@ __global__ void sobel(ui32* dr, ui32* dg, ui32* db, ui32 width, ui32 height){
         value_h -= dr[bottom - 1];
         value_v -= dr[bottom - 1];
     }
+    if(value_h < 0){
+        value_h = 0;
+    }
+    if(value_v < 0){
+        value_v = 0;
+    }
 
     const ui32 result = sqrtf(value_h * value_h + value_v * value_v);
     __syncthreads();
