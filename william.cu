@@ -42,6 +42,37 @@ __global__ void grey_img(ui32* dr, ui32* dg, ui32* db, ui32 width, ui32 height){
     db[idx] = value;
 }
 
+__global__ void diapo(ui32* dr, ui32* dg, ui32* db, ui32 width){
+
+    // Compute thread id
+    const ui32 x = threadIdx.x + blockDim.x * blockIdx.x;
+    const ui32 y = threadIdx.y + blockDim.y * blockIdx.y;
+    const ui32 idx = y * (width) + x;
+    // c = 255 - c
+    dr[idx] = 255 - dr[idx];
+    dg[idx] = 255 - dg[idx];
+    db[idx] = 255 - db[idx];
+}
+
+__global__ void one_color(ui32* dr, ui32* dg, ui32* db, ui32 width, const int n){
+
+    // Compute thread id
+    const ui32 x = threadIdx.x + blockDim.x * blockIdx.x;
+    const ui32 y = threadIdx.y + blockDim.y * blockIdx.y;
+    const ui32 idx = y * (width) + x;
+    // Every pixels is set to 0 except :
+    if(n == 1){ // blue
+        dr[idx] = 0;
+        dg[idx] = 0;
+    } else if (n == 2){ // red
+        dg[idx] = 0;
+        db[idx] = 0;
+    } else if(n == 3){ // green
+        dr[idx] = 0;
+        db[idx] = 0;
+    }
+}
+
 /*** DO NOT FORGET TO GREY SCALE FIRST***/
 __global__ void sobel(ui32* dr, ui32* dg, ui32* db, ui32 width, ui32 height){
     // Compute thread id
@@ -217,7 +248,7 @@ int main(int argc, char** argv){
     cudaMemcpy(db, hb, IMG_SIZE, cudaMemcpyHostToDevice);
 
     // Grey scale
-    grey_img<<<Num_Blocks, Threads_Per_Blocks>>>(dr, dg, db, width, height);
+    // grey_img<<<Num_Blocks, Threads_Per_Blocks>>>(dr, dg, db, width, height);
     // cudaMemcpy(hr, dr, IMG_SIZE, cudaMemcpyDeviceToHost);
     // cudaMemcpy(hg, dg, IMG_SIZE, cudaMemcpyDeviceToHost);
     // cudaMemcpy(hb, db, IMG_SIZE, cudaMemcpyDeviceToHost);
@@ -230,7 +261,7 @@ int main(int argc, char** argv){
     //     }
     // }
     // Sobel
-    sobel<<<Num_Blocks, Threads_Per_Blocks>>>(dr, dg, db, width, height);
+    one_color<<<Num_Blocks, Threads_Per_Blocks>>>(dr, dg, db, width, 2);
     // Copy to Host
     // cudaMemcpy(img, d_tmp, 3 * IMG_SIZE, cudaMemcpyDeviceToHost);
     cudaMemcpy(hr, dr, IMG_SIZE, cudaMemcpyDeviceToHost);
