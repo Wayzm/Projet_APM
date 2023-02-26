@@ -202,7 +202,7 @@ int main(int argc, char** argv){
     // Blocks for inverted image
     // dim3 Num_Blocks(3 * width/Threads_Per_Blocks.x, height/Threads_Per_Blocks.y);
     // Blocks for gray scale and sobel
-    dim3 Num_Blocks(width/Threads_Per_Blocks.x + 1, height/Threads_Per_Blocks.y + 1);
+    dim3 Num_Blocks(width/Threads_Per_Blocks.x, height/Threads_Per_Blocks.y);
 
     // Copy to device
     // cudaMemcpy(d_img, img, 3 * IMG_SIZE, cudaMemcpyHostToDevice);
