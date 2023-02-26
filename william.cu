@@ -43,21 +43,15 @@ __global__ void grey_img(ui32* dr, ui32* dg, ui32* db, ui32 width, ui32 height){
 }
 
 /*** DO NOT FORGET TO GREY SCALE FIRST***/
-__global__ void sobel(ui32* dr, ui32* dg, ui32* db, ui32 width){
-    __shared__ int sobel_h[3][3];
-    __shared__ int sobel_v[3][3];
+__global__ void sobel(ui32* dr, ui32* dg, ui32* db, ui32 width, ui32 height){
     // Compute thread id
     const ui32 x = threadIdx.x + blockDim.x * blockIdx.x;
     const ui32 y = threadIdx.y + blockDim.y * blockIdx.y;
     const ui32 idx = y * width + x;
-    /***  Compute column id in from top to bottom thread ***/
-    // threadIdx.y = 0
-    const ui32 top = blockDim.y * blockIdx.y * width + x;
-    // threadIdx.y = 1
-    const ui32 middle = (1 + blockDim.y * blockIdx.y) * width + x;
-    // threadIdx.y = 2
-    const ui32 bottom = (2 + blockDim.y * blockIdx.y) * width + x;
-    // const ui32 idx = y * (width) + x;
+
+    /*** Top and bottom idx ***/
+    int top = idx - width;
+    int bottom = idx + width;
     /*** SOBEL ALGORITHM ***/
     /**  Sobel matrix x threads of each block, horizontal change
     ** | -1 0 1 |   | (0 0) (1 0) (2 0) |
@@ -67,31 +61,54 @@ __global__ void sobel(ui32* dr, ui32* dg, ui32* db, ui32 width){
     ** sobel vertical change
     ** | 1 2 1 |   | (0 0) (1 0) (2 0) |
     ** | 0 0 0 | x | (0 1) (1 1) (2 1) |
-    ** | -1 -2 -1 |   | (0 2) (1 2) (2 2) |
+    ** |-1 -2 -1 |   | (0 2) (1 2) (2 2) |
     **/
-    sobel_h[0][0] = -1;
-    sobel_h[0][1] = 0;
-    sobel_h[0][2] = 1;
-    sobel_h[1][0] = -2;
-    sobel_h[1][1] = 0;
-    sobel_h[1][2] = 2;
-    sobel_h[2][0] = -1;
-    sobel_h[2][1] = 0;
-    sobel_h[2][2] = 1;
-    //
-    sobel_v[0][0] = -1;
-    sobel_v[0][1] = -2;
-    sobel_v[0][2] = -1;
-    sobel_v[1][0] = 0;
-    sobel_v[1][1] = 0;
-    sobel_v[1][2] = 0;
-    sobel_v[2][0] = 1;
-    sobel_v[2][1] = 2;
-    sobel_v[2][2] = 1;
     __syncthreads();
-    const int value_h = sobel_h[threadIdx.y][0] * dr[top] + sobel_h[threadIdx.y][2] * dr[bottom];
-    const int value_v = sobel_v[threadIdx.y][0] * dr[top] + sobel_v[threadIdx.y][1] * dr[middle] + sobel_v[threadIdx.y][2] * dr[bottom];
-    const ui32 result = (ui32)sqrtf(value_h * value_h + value_v * value_v);
+    int value_h = 0;
+    int value_v = 0;
+    // idx of the corners the eimage
+    // const int top_left = 0;
+    // const int top_right = width - 1;
+    // const int bottom_left = (height - 1) * width;
+    // const int bottom_right = (height - 1) * width + width - 1;
+    // left
+    if(x > 0){
+        value_h -= 2 * dr[idx - 1];
+    }
+    // right
+    if(x < width - 1){
+        value_h += 2 * dr[idx + 1];
+    }
+    // top
+    if(y > 0){
+        value_v += 2 * dr[top];
+    }
+    // bottom
+    if(y < height - 1){
+        value_v -= 2 * dr[bottom];
+    }
+    // bottom right
+    if(x != width - 1 && y != height - 1){
+        value_h += dr[bottom + 1];
+        value_v -= dr[bottom + 1];
+    }
+    //top left
+    if(x != 0 && y != 0){
+        value_h -= dr[top - 1];
+        value_v += dr[top - 1];
+    }
+    // top right
+    if(y != 0 && x != width - 1){
+        value_h += dr[top + 1];
+        value_v += dr[top + 1];
+    }
+    // bottom left
+    if(x != 0 && y != width - 1){
+        value_h -= dr[bottom - 1];
+        value_v -= dr[bottom - 1];
+    }
+
+    const ui32 result = sqrtf(value_h * value_h + value_v * value_v);
     __syncthreads();
     dr[idx] = result;
     dg[idx] = result;
@@ -195,8 +212,19 @@ int main(int argc, char** argv){
 
     // Grey scale
     grey_img<<<Num_Blocks, Threads_Per_Blocks>>>(dr, dg, db, width, height);
+    // cudaMemcpy(hr, dr, IMG_SIZE, cudaMemcpyDeviceToHost);
+    // cudaMemcpy(hg, dg, IMG_SIZE, cudaMemcpyDeviceToHost);
+    // cudaMemcpy(hb, db, IMG_SIZE, cudaMemcpyDeviceToHost);
+    // for(ui32 y = 0U; y < height; ++y){
+    //     for(ui32 x = 0U; x < 3 * width; ++x){
+    //         int idx = ((y * width) + x) * 3;
+    //         img[idx + 0] = hr[y * width + x];
+    //         img[idx + 1] = hg[y * width + x];
+    //         img[idx + 2] = hb[y * width + x];
+    //     }
+    // }
     // Sobel
-    sobel<<<Num_Blocks, Threads_Per_Blocks>>>(dr, dg, db, width);
+    sobel<<<Num_Blocks, Threads_Per_Blocks>>>(dr, dg, db, width, height);
     // Copy to Host
     // cudaMemcpy(img, d_tmp, 3 * IMG_SIZE, cudaMemcpyDeviceToHost);
     cudaMemcpy(hr, dr, IMG_SIZE, cudaMemcpyDeviceToHost);
