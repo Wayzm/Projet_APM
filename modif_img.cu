@@ -253,7 +253,14 @@ __global__ void sobel(ui32* dr, ui32* dg, ui32* db, ui32 width, ui32 height){
 }
 
 int main(int argc, char** argv){
-
+    /*** CHECKING FOR GPU***/
+    int n_gpu;
+    cudaError_t d_count = cudaGetDeviceCount(&n_gpu);
+    if (d_count == cudaErrorNoDevice) {
+        perror("No CUDA device found.\n");
+        exit(0);
+    }
+    /**** END CHECK ***/
     FreeImage_Initialise();
     const char* PathName="img.jpg";
     const char* PathDest="new_img.png";
