@@ -24,10 +24,10 @@ size :
     Taille de l'image en pixels
 
 d_img :
-    L'array qui contient l'image entière sur le GPU
+    Le tableau qui contient l'image entière sur le GPU
 
 d_tmp :
-    Un array alloué sur le GPU pour simplfier les opérations
+    Un tableau alloué sur le GPU pour simplfier les opérations
 
 width :
     Longueur de l'image
@@ -36,10 +36,10 @@ height :
     Largeur de l'image
 
 hr / hg / hb :
-    Arrays alloués sur le CPU contenant uniquement les pixels rouge / vert / bleu de l'image
+    tableaux alloués sur le CPU contenant uniquement les pixels rouge / vert / bleu de l'image
 
 dr / dg / db :
-    Arrays alloués sur le GPU contenant uniquement les pixels rouge / vert / bleu de l'image
+    tableaux alloués sur le GPU contenant uniquement les pixels rouge / vert / bleu de l'image
 
 
 | Nom | Appel | Description |
