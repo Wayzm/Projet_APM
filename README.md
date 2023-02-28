@@ -9,6 +9,13 @@ Ce projet a été ré&lisé par DIAS Nicolas, et YEUMO BARKWENDE Chutzpa William
 
 ## Fonctions
 
+ui32 :
+ unsigned int
+
+d_img :
+    L'array qui contient l'image entière sur le GPU
+
+
 | Nom | Paramètres | Description |
 | --- | ---------- | ----------- |
-| __global__ void saturation_r | unsigned int* d_img | Maximise la valeurs des pixels rouge |
+| __global__ void saturation_r(ui32* d_img, ui32 size) |  | Maximise la valeurs des pixels rouge |
