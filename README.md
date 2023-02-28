@@ -13,8 +13,10 @@ make -j
 ### Utilisation
 Assurer vous qu'un GPU qui supporte cuda est disponible sur votre plateforme
 ```shell
-sbatch <exec>
+./modif_img_cuda.exe <Appel(s)>
 ```
+
+Voir les différents appels définient plus bas.
 ## Fonctions
 
 ui32 :
