@@ -10,7 +10,7 @@ Ce projet a été ré&lisé par DIAS Nicolas, et YEUMO BARKWENDE Chutzpa William
 ## Fonctions
 
 ui32 :
- unsigned int
+    unsigned int
 
 d_img :
     L'array qui contient l'image entière sur le GPU
