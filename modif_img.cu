@@ -821,8 +821,16 @@ int main(int argc, char** argv){
     cout << "Image successfully saved ! " << endl ;
   FreeImage_DeInitialise(); //Cleanup !
 
-   //free(img);
+   free(img);
+   free(hr);
+   free(hg);
+   free(hb);
    //free(h_img);
-   //free(d_img);
-    return 0;
+   cudaFree(d_img);
+   cudaFree(d_tmp);
+   cudaFree(dr);
+   cudaFree(dg);
+   cudaFree(db);
+  
+  return 0;
 }
