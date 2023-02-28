@@ -43,6 +43,10 @@ hr / hg / hb :
 dr / dg / db :
     tableaux alloués sur le GPU contenant uniquement les pixels rouge / vert / bleu de l'image
 
+Question 13:
+La partie du programme qui execute le programme n'est pas efficace sans les streams car les 4 parties indépendante vont s'effectuer 
+les unes à la suite des autres alors qu'elle pouraient s'executer en parallèle
+
 
 | Nom | Appel | Description |
 | --- | ---------- | ----------- |
@@ -55,4 +59,4 @@ dr / dg / db :
 | __global__ sobel(ui32* dr, ui32* dg, ui32* db, ui32 width, ui32 height) | sobel | Utilise le filtre sobel sur l'image |
 | __global__ one_color(ui32* dr, ui32* dg, ui32* db, ui32 width, ui32 mode) | rouge / vert / blue | Garde la valeur du pixels d'une certaine couleurs et set les autres à 0 |
 | __global__ diapositive(ui32* d_img, ui32 width) | diapositive | Applique le filtre diapositif sur l'image |
-| | pop_art | Crée une image de 4 parties identiques où 4 filtres différents sont utilisés |
+| Pas de nom, fonction dans le main | pop_art | Crée une image de 4 parties identiques où 4 filtres différents sont utilisés |
