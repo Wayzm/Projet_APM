@@ -16,7 +16,7 @@ Assurer vous qu'un GPU qui supporte cuda est disponible sur votre plateforme
 ./modif_img_cuda.exe <Appel(s)>
 ```
 
-Voir les différents appels définient plus bas.
+Voir les différents appels définies plus bas.
 ## Fonctions
 
 ui32 :
