@@ -51,5 +51,5 @@ dr / dg / db :
 | __global__ flou(ui32* d_img, ui32 size, ui32 width) | flou | Rend l'image flou |
 | __global__ horizontal_sym(ui32* d_img, ui32* d_tmp, ui32 width, ui32 height) | sym | Symétrie horizontale de l'image |
 | __global__ sobel(ui32* dr, ui32* dg, ui32* db, ui32 width, ui32 height) | sobel | Utilise le filtre sobel sur l'image |
-| __global__ one_color(ui32* dr, ui32* dg, ui32* db, ui32 width, ui32 mode) | rouge / vert / blue | Maximise les pixels d'une certaine couleurs et set les auters à 0 |
+| __global__ one_color(ui32* dr, ui32* dg, ui32* db, ui32 width, ui32 mode) | rouge / vert / blue | Garde la valeur du pixel d'une certaine couleurs et set les autres à 0 |
 | __global__ diapositive(ui32* d_img, ui32 width) | diapositive | Applique le filtre diapositif sur l'image |
