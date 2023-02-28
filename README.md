@@ -16,6 +16,7 @@ d_img :
     L'array qui contient l'image entière sur le GPU
 
 
-| Nom | Paramètres | Description |
+| Nom | Appel | Description |
 | --- | ---------- | ----------- |
-| __global__ void saturation_r(ui32* d_img, ui32 size) |  | Maximise la valeurs des pixels rouge |
+| __global__ void saturation_r(ui32* d_img, ui32 size) | saturation_r | Maximise la valeur des pixels rouge |
+| __global__ saturation_b(ui32* d_img, ui32 size) | saturation_b | Maixmise la valeur des pixels bleu |
