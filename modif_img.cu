@@ -405,7 +405,7 @@ int main(int argc, char** argv){
             dim3 Num_Blocks(width/Threads_Per_Blocks.x+1, height/Threads_Per_Blocks.y+1);
             // lancement du kernel 100 fois pour que le flou s'applique bien
             // et copie de la mémoire modifé dans le kernel sur l'hote
-            for(int k = 0; k < 10; k++){
+            for(int k = 0; k < 100; k++){
                 flou<<<Num_Blocks,Threads_Per_Blocks>>>(d_img,width*height,width);
                 status = cudaGetLastError();
                 if (status != cudaSuccess) {
@@ -821,7 +821,8 @@ int main(int argc, char** argv){
     cout << "Image successfully saved ! " << endl ;
   FreeImage_DeInitialise(); //Cleanup !
 
-   // free(img);
-   // free(h_img);
+   //free(img);
+   //free(h_img);
+   //free(d_img);
     return 0;
 }
