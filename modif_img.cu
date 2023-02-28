@@ -447,7 +447,7 @@ int main(int argc, char** argv){
                 printf("SOBEL : probleme dans cudaMemcpy de d_img --> img.\n");
             // Separation des pixels
             for(ui32 y = 0U; y < height; ++y){
-                for(ui32 x = 0U; x < 3 * width; ++x){
+                for(ui32 x = 0U; x < width; ++x){
                     int idx = ((y * width) + x) * 3;
                     hr[y * width + x] = img[idx + 0];
                     hg[y * width + x] = img[idx + 1];
@@ -484,7 +484,7 @@ int main(int argc, char** argv){
             if(err != cudaSuccess)
                 printf("SOBEL : probleme dans cudaMemcpy de db --> hb.\n");
             for(ui32 y = 0U; y < height; ++y){
-                for(ui32 x = 0U; x < 3 * width; ++x){
+                for(ui32 x = 0U; x < width; ++x){
                     int idx = ((y * width) + x) * 3;
                     img[idx + 0] = hr[y * width + x];
                     img[idx + 1] = hg[y * width + x];
@@ -498,7 +498,7 @@ int main(int argc, char** argv){
             dim3 Num_Blocks(width/Threads_Per_Blocks.x + 1, height/Threads_Per_Blocks.y + 1);
             // Separation des pixels
             for(ui32 y = 0U; y < height; ++y){
-                for(ui32 x = 0U; x < 3 * width; ++x){
+                for(ui32 x = 0U; x < width; ++x){
                     int idx = ((y * width) + x) * 3;
                     hr[y * width + x] = img[idx + 0];
                     hg[y * width + x] = img[idx + 1];
@@ -531,7 +531,7 @@ int main(int argc, char** argv){
             if(err != cudaSuccess)
                 printf("ROUGE : probleme dans cudaMemcpy de db --> hb.\n");
             for(ui32 y = 0U; y < height; ++y){
-                for(ui32 x = 0U; x < 3 * width; ++x){
+                for(ui32 x = 0U; x < width; ++x){
                     int idx = ((y * width) + x) * 3;
                     img[idx + 0] = hr[y * width + x];
                     img[idx + 1] = hg[y * width + x];
@@ -545,7 +545,7 @@ int main(int argc, char** argv){
             dim3 Num_Blocks(width/Threads_Per_Blocks.x + 1, height/Threads_Per_Blocks.y + 1);
             // Separation des pixels
             for(ui32 y = 0U; y < height; ++y){
-                for(ui32 x = 0U; x < 3 * width; ++x){
+                for(ui32 x = 0U; x < width; ++x){
                     int idx = ((y * width) + x) * 3;
                     hr[y * width + x] = img[idx + 0];
                     hg[y * width + x] = img[idx + 1];
@@ -578,7 +578,7 @@ int main(int argc, char** argv){
             if(err != cudaSuccess)
                 printf("VERT : probleme dans cudaMemcpy de db --> hb.\n");
             for(ui32 y = 0U; y < height; ++y){
-                for(ui32 x = 0U; x < 3 * width; ++x){
+                for(ui32 x = 0U; x < width; ++x){
                     int idx = ((y * width) + x) * 3;
                     img[idx + 0] = hr[y * width + x];
                     img[idx + 1] = hg[y * width + x];
@@ -592,7 +592,7 @@ int main(int argc, char** argv){
             dim3 Num_Blocks(width/Threads_Per_Blocks.x + 1, height/Threads_Per_Blocks.y + 1);
             // Separation des pixels
             for(ui32 y = 0U; y < height; ++y){
-                for(ui32 x = 0U; x < 3 * width; ++x){
+                for(ui32 x = 0U; x < width; ++x){
                     int idx = ((y * width) + x) * 3;
                     hr[y * width + x] = img[idx + 0];
                     hg[y * width + x] = img[idx + 1];
@@ -625,7 +625,7 @@ int main(int argc, char** argv){
             if(err != cudaSuccess)
                 printf("BLUE : probleme dans cudaMemcpy de db --> hb.\n");
             for(ui32 y = 0U; y < height; ++y){
-                for(ui32 x = 0U; x < 3 * width; ++x){
+                for(ui32 x = 0U; x < width; ++x){
                     int idx = ((y * width) + x) * 3;
                     img[idx + 0] = hr[y * width + x];
                     img[idx + 1] = hg[y * width + x];
@@ -831,6 +831,6 @@ int main(int argc, char** argv){
    cudaFree(dr);
    cudaFree(dg);
    cudaFree(db);
-  
+
   return 0;
 }

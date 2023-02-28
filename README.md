@@ -20,6 +20,9 @@ sbatch <exec>
 ui32 :
     unsigned int
 
+size :
+    Taille de l'image en pixels
+
 d_img :
     L'array qui contient l'image entière sur le GPU
 
@@ -45,7 +48,8 @@ dr / dg / db :
 | __global__ saturation_b(ui32* d_img, ui32 size) | saturation_b | Maixmise la valeur des pixels bleu |
 | __global__ void saturation_g(ui32* d_img, ui32 size) | saturation_g | Maximise la valeurs des pixels vert |
 | __global__ grey_img(ui32* d_img, ui32 width, ui32 height) | grey_img | Transforme l'image en niveau de gris |
-| __global__ flou(ui32* d_img, ui32 ???, ui32 width) | flou | Rend l'image flou |
+| __global__ flou(ui32* d_img, ui32 size, ui32 width) | flou | Rend l'image flou |
 | __global__ horizontal_sym(ui32* d_img, ui32* d_tmp, ui32 width, ui32 height) | sym | Symétrie horizontale de l'image |
 | __global__ sobel(ui32* dr, ui32* dg, ui32* db, ui32 width, ui32 height) | sobel | Utilise le filtre sobel sur l'image |
-| __global__ one_color(ui32* dr, ui32* dg, ui32* db, ui32 width, ui32 mode) | rouge / vert / bleu | Maximise les pixels d'une certaine couleurs et set les auters à 0 |
+| __global__ one_color(ui32* dr, ui32* dg, ui32* db, ui32 width, ui32 mode) | rouge / vert / blue | Maximise les pixels d'une certaine couleurs et set les auters à 0 |
+| __global__ diapositive(ui32* d_img, ui32 width) | diapositive | Applique le filtre diapositif sur l'image |
