@@ -5,8 +5,16 @@
 
 Ce projet a été ré&lisé par DIAS Nicolas, et YEUMO BARKWENDE Chutzpa William dans le cadre d'une unité d'enseignement pour l'apprentissage en programmation sur GPU.
 
-## Utilisation
-
+## Instruction
+### Build
+```shell
+make -j
+```
+### Utilisation
+Assurer vous qu'un GPU qui supporte cuda est disponible sur votre plateforme
+```shell
+sbatch <exec>
+```
 ## Fonctions
 
 ui32 :
